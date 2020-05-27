@@ -25,6 +25,9 @@
   },
   "plugins": ["react", "react-hooks", "@typescript-eslint", "prettier"],
   "rules": {
+    "no-plusplus": "off",
+    "no-param-reassign": "off",
+    "@typescript-eslint/no-use-before-define": "off",
     "prettier/prettier": "error",
     "react-hooks/rules-of-hooks": "error",
     "react-hooks/exhaustive-deps": "warn",
