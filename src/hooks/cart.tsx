@@ -29,80 +29,60 @@ const CartProvider: React.FC = ({ children }) => {
   const AS_PRODUCTS_KEY = '@GoMarketPlace:CartItems';
   const [products, setProducts] = useState<Product[]>([]);
 
-  const getCartItems = useCallback(async () => {
-    let cartItems: Product[] = [];
-
-    // await AsyncStorage.removeItem(AS_PRODUCTS_KEY);
-
-    const jsonItems = await AsyncStorage.getItem(AS_PRODUCTS_KEY);
-    if (jsonItems) {
-      cartItems = JSON.parse(jsonItems);
+  useEffect(() => {
+    async function loadProducts(): Promise<void> {
+      const jsonItems = await AsyncStorage.getItem(AS_PRODUCTS_KEY);
+      if (jsonItems) {
+        setProducts([...JSON.parse(jsonItems)]);
+      }
     }
 
-    return cartItems;
+    loadProducts();
   }, []);
+
+  const addToCart = useCallback(
+    async (product: Product) => {
+      const productExists = products.some(p => p.id === product.id);
+      if (productExists) {
+        setProducts([
+          ...products.map(p =>
+            p.id === product.id ? { ...product, quantity: p.quantity + 1 } : p,
+          ),
+        ]);
+      } else {
+        setProducts([...products, { ...product, quantity: 1 }]);
+      }
+
+      await AsyncStorage.setItem(AS_PRODUCTS_KEY, JSON.stringify(products));
+    },
+    [products],
+  );
 
   const increment = useCallback(
     async id => {
-      const cartItems = await getCartItems();
-      const index = cartItems.findIndex(item => item.id === id);
+      setProducts([
+        ...products.map(p =>
+          p.id === id ? { ...p, quantity: p.quantity + 1 } : p,
+        ),
+      ]);
 
-      if (index >= 0) {
-        cartItems[index].quantity++;
-        await AsyncStorage.setItem(AS_PRODUCTS_KEY, JSON.stringify(cartItems));
-
-        setProducts(cartItems);
-      }
+      await AsyncStorage.setItem(AS_PRODUCTS_KEY, JSON.stringify(products));
     },
-    [getCartItems],
+    [products],
   );
 
   const decrement = useCallback(
     async id => {
-      const cartItems = await getCartItems();
-      const index = cartItems.findIndex(item => item.id === id);
+      setProducts([
+        ...products
+          .map(p => (p.id === id ? { ...p, quantity: p.quantity - 1 } : p))
+          .filter(p => p.quantity > 0),
+      ]);
 
-      if (index >= 0) {
-        cartItems[index].quantity--;
-
-        if (cartItems[index].quantity <= 0) {
-          cartItems.splice(index, 1);
-        }
-
-        await AsyncStorage.setItem(AS_PRODUCTS_KEY, JSON.stringify(cartItems));
-
-        setProducts(cartItems);
-      }
+      await AsyncStorage.setItem(AS_PRODUCTS_KEY, JSON.stringify(products));
     },
-    [getCartItems],
+    [products],
   );
-
-  const addToCart = useCallback(
-    async (product: Product) => {
-      const cartItems = await getCartItems();
-
-      const itemExists = cartItems.some(item => item.id === product.id);
-      if (itemExists) {
-        await increment(product.id);
-      } else {
-        product.quantity = 1;
-        cartItems.push(product);
-        await AsyncStorage.setItem(AS_PRODUCTS_KEY, JSON.stringify(cartItems));
-
-        setProducts([...products, product]);
-      }
-    },
-    [products, getCartItems, increment],
-  );
-
-  useEffect(() => {
-    async function loadProducts(): Promise<void> {
-      const cartItems = await getCartItems();
-      setProducts(cartItems);
-    }
-
-    loadProducts();
-  }, [getCartItems]);
 
   const value = React.useMemo(
     () => ({ addToCart, increment, decrement, products }),
